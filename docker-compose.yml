@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:1337"
+    
+    environment:
+      - MONGO_URL=mongodb+srv://leonelsantana32:Babylon98736@cluster0.beva5sx.mongodb.net/?retryWrites=true&w=majority
+    
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+      
+  
