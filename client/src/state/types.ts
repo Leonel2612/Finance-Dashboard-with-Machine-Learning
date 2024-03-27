@@ -59,3 +59,46 @@ export interface GetTransactionResponse {
     createdAt:string;
     updatedAt:string;
 }
+
+export interface GetFirstTransactionResponse{
+    id:string;
+    _id:string;
+    __v:number;
+    buyer:number;
+    amount:number;
+    productIds:Array<string>;
+    createdAt:string;
+    updatedAt:string;
+}
+
+export interface OperationalExpensesStatus {
+    operationalMin:number,
+    operationalQ1:number,
+    operationalMedian:number,
+    operationalQ3:number,
+    operationalMax:number,
+}
+
+export interface nonOperationalExpensesStatus{
+    nonOperationalMin:number,
+    nonOperationalQ1:number,
+    nonOperationalMedian:number,
+    nonOperationalQ3:number,
+    nonOperationalMax:number,
+}
+
+
+export interface monthlyDataItem {
+    month:string,
+    revenue:number,
+    operationalExpenses:number,
+    nonOperationalExpenses:number,
+    expenses:number
+   
+}
+
+
+export interface Financials {
+    profitMarginValue:number,
+    superavitOrDeficit:number
+}

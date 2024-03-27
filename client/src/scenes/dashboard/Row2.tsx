@@ -2,20 +2,95 @@ import BoxHeader from '@/components/BoxHeader';
 import DashboardBox from '@/components/DashboardBox'
 import FlexBetween from '@/components/FlexBetween';
 import { useGetKpisQuery, useGetProductsQuery } from '@/state/api'
-import { Box, Typography, useTheme } from '@mui/material';
-import { useMemo } from 'react'
-import { CartesianGrid, Tooltip, Line, LineChart, ResponsiveContainer, XAxis, YAxis, PieChart, Pie, Cell, Scatter,ScatterChart, ZAxis } from 'recharts';
+import { Box, Slider, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react'
+import { CartesianGrid, Tooltip, ResponsiveContainer, XAxis, YAxis, PieChart, Pie, Cell, Scatter,ScatterChart, ZAxis } from 'recharts';
+import * as ss from 'simple-statistics'
+import { OperationalExpensesStatus, nonOperationalExpensesStatus,monthlyDataItem, Financials } from '@/state/types';
+import "ag-charts-enterprise";
+import { AgChartOptions } from "ag-charts-enterprise";
+import { AgChartsReact } from "ag-charts-react";
 
 
 
-const pieData=[
-    {
-        name:"Group A", value:800
+
+const ChartBoxPlot = ({
+    operationalStats,
+    nonOperationalStats,
+    palette
+}) => {
+    const [options] = useState<AgChartOptions>({
+    autoSize:true,
+    background:{
+        fill:palette.background.default
     },
-    {
-        name:"Group B", value:400
-    }
-]
+      data: [{
+        expenses: "Operational expenses",
+        min: operationalStats.operationalMin,
+        q1: operationalStats.operationalQ1,
+        median: operationalStats.operationalMedian,
+        q3: operationalStats.operationalQ3,
+        max: operationalStats.operationalMax,
+      },
+      {
+        expenses: "Non Operational expenses",
+        min: nonOperationalStats.nonOperationalMin,
+        q1: nonOperationalStats.nonOperationalQ1,
+        median: nonOperationalStats.nonOperationalMedian,
+        q3: nonOperationalStats.nonOperationalQ3,
+        max: nonOperationalStats.nonOperationalMax,
+      },
+      ],
+      axes:[
+        {
+            type:'category',
+            position:'bottom',
+            label:{
+                color:"#6b6d74"
+            }
+        },
+        {
+            type:"number",
+            position:"left",
+            label:{
+                color:"#6b6d74"
+            }
+        }
+
+      ],
+      series: [
+        {
+          type: "box-plot",
+          yName: "Box plot values",
+          xKey: "expenses",
+          minKey: "min",
+          q1Key: "q1",
+          medianKey: "median",
+          q3Key: "q3",
+          maxKey: "max",
+          stroke: "#098a89",
+          fill: palette.primary[500],
+          strokeWidth: 2,
+          whisker: {
+            stroke: palette.primary[700],
+           
+          },
+          cap:{
+            lengthRatio:0.8
+        }
+        },
+      ],
+
+    });
+  
+    return (
+            <div style={{margin:"20px 0px 0px -10px" }}> 
+                <AgChartsReact options={options} />
+            </div>
+    )
+  };
+
+
 
 const Row2 = () => {
 
@@ -23,22 +98,139 @@ const Row2 = () => {
     const {data:productData} = useGetProductsQuery();
     const {palette}=useTheme();
     const pieColor=[palette.primary[800], palette.primary[300]]
+    const [operationalStats,setOperationalStats] = useState<OperationalExpensesStatus | null> (null)
+    const [nonOperationalStats, setNonOperationalStats]=useState<nonOperationalExpensesStatus | null> (null)
+    const [targetSales,setTargetSales]=useState(83)
+    const [profitMargin,setProfitMargin] = useState(0)
+    const [lossesPercentage,setLossesPercentage] = useState(0)
+    const isAboveMediumScreens = useMediaQuery("(min-width:1200px)")
 
-    console.log("Products",productData)
 
-    const operationalExpenses = useMemo(()=>{
-        return(
-            operationalData &&
-            operationalData[0].monthlyData.map(({month,operationalExpenses,nonOperationalExpenses})=>{
-                return{
-                    name:month.substring(0,3),
-                    "Operational Expenses": operationalExpenses,
-                    "Non OperationalExpenses":nonOperationalExpenses,
-                }
-            })
-        )
+ 
+
+
+
+    const statsRevenueExpenses:monthlyDataItem[] = useMemo(()=>{
+        
+        if (!operationalData||operationalData.length===0 || !operationalData[0].monthlyData){
+            return []
+        }
+
+        return operationalData[0].monthlyData.map(({month,operationalExpenses,nonOperationalExpenses,revenue,expenses})=>({
+            "month":month.substring(0,3),
+            "revenue": revenue,
+            "expenses":expenses,
+            "operationalExpenses":operationalExpenses,
+            "nonOperationalExpenses":nonOperationalExpenses,
+        }))
+
     },[operationalData])
 
+    const calculateRevenueAndExpenses = (operationalStats:monthlyDataItem[]) =>{
+
+        let revenueTotalMonth = 0;
+        let expensesTotalMonth = 0;
+
+        operationalStats.forEach((data)=>{
+            revenueTotalMonth += data.revenue;
+            expensesTotalMonth += data.expenses;
+        })
+        
+        const averageRevenue = revenueTotalMonth / operationalStats.length
+        const averageExpenses = expensesTotalMonth/ operationalStats.length
+
+        return {
+            averageRevenue,
+            averageExpenses
+        }
+    }
+    const {averageRevenue, averageExpenses} = calculateRevenueAndExpenses(statsRevenueExpenses)
+
+    const calculateOperationalExpensesStats = (operationalExpensesArray)=>{
+        const operationalMin = ss.min(operationalExpensesArray);
+        const operationalQ1 = ss.quantile(operationalExpensesArray, 0.25);
+        const operationalMedian = ss.median(operationalExpensesArray);
+        const operationalQ3 = ss.quantile(operationalExpensesArray, 0.75);
+        const operationalMax = ss.max(operationalExpensesArray);
+
+        return {operationalMin,
+                operationalQ1,
+                operationalMedian,
+                operationalQ3,
+                operationalMax,
+        }
+    }
+
+    const calculateNonOperationalExpensesStats = (nonOperationalExpensesArray)=>{
+        const nonOperationalMin = ss.min(nonOperationalExpensesArray);
+        const nonOperationalQ1 = ss.quantile(nonOperationalExpensesArray, 0.25);
+        const nonOperationalMedian = ss.median(nonOperationalExpensesArray);
+        const nonOperationalQ3 = ss.quantile(nonOperationalExpensesArray, 0.75);
+        const nonOperationalMax = ss.max(nonOperationalExpensesArray);
+
+        return {nonOperationalMin,
+                nonOperationalQ1,
+                nonOperationalMedian,
+                nonOperationalQ3,
+                nonOperationalMax,
+        }
+    }
+
+
+    const lossesAndProfit = (targetSales:number,avgRevenue:number,avgExpenses:number):Financials=> {
+
+        const profit = avgRevenue - avgExpenses
+        const profitMarginValue = (profit / averageRevenue *100)
+        
+        const baseValue = averageRevenue/90
+        const realTargetSales=baseValue*targetSales
+        
+        let superavitOrDeficit
+
+        if (averageRevenue<realTargetSales){
+            superavitOrDeficit = ((realTargetSales - averageRevenue) / realTargetSales) * -100;
+        }
+        else {
+
+            superavitOrDeficit = ((averageRevenue - realTargetSales) / realTargetSales) * 100; 
+
+        }
+
+        return {
+            profitMarginValue,
+            superavitOrDeficit
+        }
+    }
+   
+
+    useEffect(()=>{
+        const operationalExpensesArray:number[]=statsRevenueExpenses.map((expenses)=>expenses['operationalExpenses'])
+        const nonOperationalExpensesArray:number[] = statsRevenueExpenses.map((expenses)=>expenses["nonOperationalExpenses"])
+        
+
+        if (operationalExpensesArray.length > 0 && nonOperationalExpensesArray.length > 0){
+            setOperationalStats(calculateOperationalExpensesStats(operationalExpensesArray))
+            setNonOperationalStats(calculateNonOperationalExpensesStats(nonOperationalExpensesArray))
+
+        }
+       // eslint-disable-next-line
+    }, [operationalData])
+
+
+    useEffect(()=>{
+
+        const financials = lossesAndProfit(targetSales,averageRevenue,averageExpenses)
+        setProfitMargin(financials.profitMarginValue)
+        setLossesPercentage(financials.superavitOrDeficit)
+       
+        // eslint-disable-next-line
+    },[operationalData,targetSales])
+
+    
+    const handleSliderChange = (event, newValue) => {
+        setTargetSales(newValue)
+    }
+    
 
     const productExpenseData= useMemo(()=>{
         return(
@@ -53,45 +245,48 @@ const Row2 = () => {
         )
     },[productData])
 
+    const pieData=[
+        {
+            name:"Group A", value:lossesPercentage
+        },
+        {
+            name:"Group B", value:profitMargin
+        }
+    ]
+
+
 
     return (
         <>
             <DashboardBox bgcolor="#fff" gridArea="d"> 
-
             <BoxHeader title='Operational vs Non Operational expenses' sideText='+4%'/>
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                    data={operationalExpenses}
-                    margin={{
-                        top: 20,
-                        right: 0,
-                        left: -10,
-                        bottom: 55,
-                    }}
-                        >
-                        <CartesianGrid vertical={false} stroke={palette.grey[800]}/>
-                        
-                        <XAxis dataKey="name"  tickLine={false} style={{fontSize:"10px"}}/>
-                        <YAxis yAxisId="left" orientation='left' axisLine={false} tickLine={false} style={{fontSize:"10px"}}  />
-                        <YAxis yAxisId="right" orientation='right' axisLine={false} tickLine={false} style={{fontSize:"10px"}}  />
-                        <Tooltip/>
-                        <Line yAxisId="left" type="monotone" dataKey="Non OperationalExpenses" stroke={palette.tertiary[500]} />
-                        <Line yAxisId="right" type="monotone" dataKey="Operational Expenses" stroke={palette.primary.main} />
-
-                    </LineChart>
-                </ResponsiveContainer>
+                    <Box
+                    >
+                    {
+                        (nonOperationalStats  && operationalStats) ? 
+                     (
+                        <ChartBoxPlot
+                            operationalStats={operationalStats}
+                            nonOperationalStats={nonOperationalStats}
+                            palette={palette}
+                            
+                        />
+                     )
             
+                        : ( null)
+                    }
+                    </Box>
             </DashboardBox>
             <DashboardBox bgcolor="#fff" gridArea="e">
             <BoxHeader title='Campaigns and Targets' sideText='+4%' />
-            <FlexBetween mt="0.25 rem" gap="1.5" pr="1rem">
+            <FlexBetween mt={isAboveMediumScreens? "1rem":"1.5rem" } gap="1.5" pr={isAboveMediumScreens? "1rem":"" } ml={isAboveMediumScreens? "2rem":"4rem" }>
                 <PieChart 
                     width={100} height={110}
                     margin={{
                         top: 0,
-                        right:-10,
+                        right:-15,
                         left:10,
-                        bottom: 0,
+                        bottom: -10,
                     }}
                     >
                     <Pie
@@ -109,26 +304,35 @@ const Row2 = () => {
                         ))}
                     </Pie>
                 </PieChart>
-                <Box ml="-0.7rem" flexBasis="40%" textAlign="center">
-                    <Typography variant='h5'> Target Sales</Typography>
+                <Box ml="1rem" flexBasis="30%" textAlign="center">
+                    <Typography variant='h5'
+                    id="target-sales-slider"
+                    > Target Sales</Typography>
                     <Typography m="0.3rem 0" variant='h3' color={palette.primary[300]}>
-                        83
+                        <Slider
+                        onChange={handleSliderChange}
+                        value={ typeof targetSales ==="number" ? targetSales:50}
+                        aria-labelledby='target-sales-slider'
+                        max={90}
+                        min = {50}
+                        />
+                        {targetSales}
                     </Typography>
                     <Typography variant='h6'>
                         Finance Goals of the Campaign that is desired
                     </Typography>
                 </Box>
 
-                <Box  flexBasis="40%" >
+                <Box  flexBasis="30%" >
                     <Typography variant='h5'> Losses in Revenue</Typography>
                     <Typography variant='h6'>
-                        Losses are down 25%
+                        Losses are down {lossesPercentage.toFixed(2)}% 
                     </Typography>
                     <Typography mt="0.7rem" variant='h5'>
                         Profit Margins
                     </Typography>
                     <Typography variant='h6'>
-                        Margins are up by 30% from last month
+                        Margins are up by {profitMargin.toFixed(2)}% from last month
                     </Typography>
                 </Box>
             </FlexBetween>

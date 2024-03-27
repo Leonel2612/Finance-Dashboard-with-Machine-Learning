@@ -12,6 +12,7 @@ import productRoutes from "./routes/product.js"
 import Product from "./models/Product.js"
 import Transaction from "./models/Transaction.js";
 import transactionRoutes from "./routes/transaction.js"
+import firstTransactionRoutes from "./routes/firstTransactions.js"
 
 
 // configurations:
@@ -32,8 +33,7 @@ app.use(cors())
 app.use("/kpi",kpiRoutes)
 app.use("/product",productRoutes)
 app.use("/transaction", transactionRoutes)
-
-
+app.use("/transaction",firstTransactionRoutes)
 
 
 // MONDOSE SETUP
@@ -51,8 +51,9 @@ mongoose
         // add data one time only or as needed
         // await mongoose.connection.db.dropDatabase();
         // KPI.insertMany(kpis)
+        // await mongoose.connection.db.dropDatabase();
         // Product.insertMany(products)
-
+        // await mongoose.connection.db.dropDatabase();
         // Transaction.insertMany(transactions)
     })
         .catch((error)=>console.log(`${error} did not connect!`))

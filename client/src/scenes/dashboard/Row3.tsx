@@ -1,23 +1,113 @@
 import DashboardBox from '@/components/DashboardBox'
-import { useGetKpisQuery, useGetProductsQuery, useGetTransactionsQuery } from '@/state/api'
-import { useMemo } from 'react'
+import { useGetFirstTransactionsQuery, useGetProductsQuery, useGetLastTransactionsQuery } from '@/state/api'
+import { useMemo, useState } from 'react'
 import { DataGrid, GridCellParams } from '@mui/x-data-grid';
 import BoxHeader from '@/components/BoxHeader';
-import { Box, Typography, useTheme } from '@mui/material';
-import { Pie, PieChart,Cell } from 'recharts';
-import FlexBetween from '@/components/FlexBetween';
+import { Box, useMediaQuery, useTheme } from '@mui/material';
+import React from "react";
+import { AgChartsReact } from "ag-charts-react";
+import { AgChartOptions} from "ag-charts-community";
+import { ResponsiveContainer } from 'recharts';
+
+const ChartBubleLastAndFirst = ({
+  statsFirstTransactions,
+  statsLastTransactions,
+}) => {
+  const {palette}= useTheme()
+  const [options] = useState<AgChartOptions>({
+    autoSize:true,
+    
+    background: {
+      fill:palette.background.default
+    },
+    title: {
+      text: "First Transactions vs Last Transactions",
+      color:"#B3B6C2"
+      
+    },
+    subtitle: {
+      text: "Based on Transaction Amount",
+      color:"#B3B6C2"
+    },
+    series: [
+      {
+        type: "bubble",
+        title: "First Transactions",
+        data: statsFirstTransactions,
+        xKey: "amount",
+        xName: "Money",
+        yKey: "productIds",
+        yName: "Count",
+        sizeKey: "totalAmount",
+        sizeName: "Total amount of money", 
+      },
+      {
+        type: "bubble",
+        title: "Last Transactions",
+        data: statsLastTransactions,
+        xKey: "amount",
+        xName: "Money",
+        yKey: "productIds",
+        yName: "Count",
+        sizeKey: "totalAmount",
+        sizeName: "Total amount of money",
+      },
+    ],
+    axes: [
+      {
+        type: "number",
+        position: "bottom",
+        title: {
+          text: "Amount Of Money",
+          color:"#B3B6C2"
+        },
+        label: {
+          formatter: (params) => {
+            return params.value + "$";
+          },
+          color:"#6b6d74"
+        },
+      },
+      {
+        type: "number",
+        position: "left",
+        title: {
+          text: "Amount Of Products sold",
+          color:"#B3B6C2"
+        },
+
+        label: {
+          formatter: (params) => {
+            return params.value + "";
+          },
+          color:"#6b6d74"
+        },
+      },
+    ],
 
 
+    legend:{
+      item:{
+        label:{
+          color:"#B3B6C2"
+        }
+      }
+    }
+
+  });
+
+
+  return <AgChartsReact  options={options} />;
+};
 
 
 const Row3 = () => {
-  const {data:kpiData}=useGetKpisQuery();
-  const {data:transactionsData}=useGetTransactionsQuery();
+  const {data:lastTransactionsData}=useGetLastTransactionsQuery();
   const{data:productData}=useGetProductsQuery();
-  
+  const {data:firstTransactionsData} = useGetFirstTransactionsQuery();  
   const {palette}=useTheme();
-  const pieColors=[palette.primary[800],palette.primary[500]]
 
+  const isAboveMediumScreens = useMediaQuery("(min-width:1200px)")
 
   const expensesAndPrice=useMemo(()=>{
     return(
@@ -32,25 +122,6 @@ const Row3 = () => {
     )
 
   },[productData])
-
-  const pieChartData=useMemo(()=>{
-    if (kpiData){
-      const totalExpenses=kpiData[0].totalExpenses;
-      return Object.entries(kpiData[0].expensesByCategory).map(
-          ([key,value])=>{
-            return[{
-                name:key,
-                value:value
-            },
-            {
-              name:`${key} of Total`,
-              value:totalExpenses-value
-            }
-          ]
-        } 
-      )
-    }
-  },[kpiData])
 
 
   const column=[
@@ -90,19 +161,45 @@ const Row3 = () => {
     }
   ]
 
-
     
-  
-  console.log("transactions",kpiData)
+    const statsFirstTransactions = useMemo(()=>{
+      return (
+        firstTransactionsData && 
+        firstTransactionsData.map(({buyer,amount,productIds})=>{
+          return{
+            buyer:buyer,
+            amount:amount,
+            productIds:productIds.length,
+            totalAmount:parseFloat(((productIds.length)*amount).toFixed(2))
+          }
+        }))
+    },[firstTransactionsData])
+    
+
+    const statsLastTransactions = useMemo(()=>{
+      return (
+        lastTransactionsData &&
+        lastTransactionsData.map(({buyer,amount,productIds})=>{
+          return{
+            buyer:buyer,
+            amount:amount,
+            productIds:productIds.length,
+            totalAmount:parseFloat(((productIds.length)*amount).toFixed(2))
+          }
+        })
+      )
+
+
+    },[lastTransactionsData])
 
     return (
       <>
             <DashboardBox  gridArea="g"> 
             <BoxHeader title='List of products' sideText={`${productData?.length} products`}/>
               <Box
-                mt="0.5rem"
+                mt="0.3rem"
                 p="0 0.5rem"
-                height="75%"
+                height="70%"
                 sx={{
                   "& .MuiDataGrid-root":{
                     color:palette.grey[300],
@@ -130,14 +227,35 @@ const Row3 = () => {
               />
               </Box>
             </DashboardBox>
-            
-            
+          
             <DashboardBox  gridArea="h"> 
-            <BoxHeader title='Orders' sideText={`${transactionsData?.length} lastest transactions`}/>
+            <BoxHeader title='Last and First Transactions' sideText="+5%"/>
               <Box
-                mt="1rem"
+              height="83%"
+    
+              >
+              {
+                statsFirstTransactions && statsLastTransactions ? (
+                  <ChartBubleLastAndFirst
+                  statsFirstTransactions={statsFirstTransactions}
+                  statsLastTransactions={statsLastTransactions}
+                  /> 
+                )
+                :
+                (null)
+              }
+              </Box>
+           
+              </DashboardBox>
+            <DashboardBox  gridArea="i">
+              
+            <BoxHeader title='Orders' sideText={`${lastTransactionsData?.length} lastest transactions`}/>      
+              
+            <ResponsiveContainer height="70%" width="100%">
+              <Box
+              mt= {isAboveMediumScreens ? "1rem" : ""}
                 p="0 0.5rem"
-                height="80%"
+                height="100%"
                 sx={{
                   "& .MuiDataGrid-root":{
                     color:palette.grey[300],
@@ -160,71 +278,12 @@ const Row3 = () => {
                 columnHeaderHeight={25}
                 rowHeight={35}
                 hideFooter={true}
-                rows={transactionsData||[]}
+                rows={lastTransactionsData||[]}
                 columns={columnTransactions}
               />
               </Box>
             
-                
-            </DashboardBox>
-            <DashboardBox  gridArea="i">
-              
-                <BoxHeader title="Expense BreakDown By Category" sideText='+4%'/>
-                <FlexBetween mt="0.5rem" gap="0.5rem" p="0 1rem" textAlign="center">
-                
-                {
-                  pieChartData?.map((data,i)=>(
-                    <Box key={`${data[0].name}-${i}`}>
-                      <PieChart 
-                      width={110}
-                      height={80}
-                      margin={{
-                          top: 0,
-                          right:4,
-                          left:1,
-                          bottom: 0,
-                      }}
-                      >
-                        <Pie
-                            stroke='none'
-                            data={data}
-                            innerRadius={18}
-                            outerRadius={35}
-                            paddingAngle={2}
-                            dataKey="value"
-                            >
-                            {data.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={pieColors[index]} />
-                            ))}
-                        </Pie>
-                      </PieChart>
-                    <Typography variant='h5'>{data[0].name}</Typography>
-                    </Box>
-                  ))        
-                  }
-                </FlexBetween>              
-            </DashboardBox>
-            <DashboardBox  gridArea="j">
-                  <BoxHeader title='Overall Summary and Explanation Data' sideText='+15%'/>
-                      <Box height="15px"
-                           margin="1.25rem 1rem 0.4rem 1rem"
-                           bgcolor={palette.primary[600]}
-                           borderRadius="1rem"
-                      >
-                        <Box
-                        height="15px"
-                        bgcolor={palette.primary[800]}
-                        borderRadius="1rem"
-                        width="40%"
-                        >
-                        </Box>
-                      </Box>
-
-                      <Typography margin="0 1rem" p="0.1rem 0rem 0.1rem 0" variant='h6'>
-                        This dynamic element provides a clear and immediate representation of our current progress in data analysis and summarization efforts. The teal fill of the progress bar against the dark background offers a stark visual representation of the advancement, and the "+15%" marker signifies an improvement or an increment over a baseline measurement.
-                      </Typography>
-
-              
+              </ResponsiveContainer>
             </DashboardBox>
       </>
     )

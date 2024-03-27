@@ -3,7 +3,7 @@ import DashboardBox from '@/components/DashboardBox';
 import { useGetKpisQuery } from '@/state/api';
 import { useTheme } from '@mui/material';
 import { useMemo } from 'react';
-import { ResponsiveContainer, AreaChart,XAxis,YAxis, Line, CartesianGrid, Legend, LineChart, BarChart, Bar} from 'recharts';
+import { ResponsiveContainer, AreaChart,XAxis,YAxis, CartesianGrid, Legend,  BarChart, Bar} from 'recharts';
 import { Tooltip, Area } from 'recharts';
 
 const Row1 = () => {
@@ -11,7 +11,6 @@ const Row1 = () => {
     const { data }=useGetKpisQuery();
     const {palette}=useTheme()
 
-    console.log('data',data)
 
     const revenueExpenses=useMemo(()=>{
         return(
@@ -46,8 +45,9 @@ const Row1 = () => {
     const revenue=useMemo(()=>{
         return (
             data && 
-            data[0].monthlyData.map(({revenue})=>{
+            data[0].monthlyData.map(({month,revenue})=>{
                 return{
+                    name:month.substring(0,3),
                     revenue:revenue
                 }
             })
@@ -57,7 +57,7 @@ const Row1 = () => {
     return (
         <>
             <DashboardBox gridArea="a"> 
-                <BoxHeader title='Revenue and Expenses' subtitle='The Green line represents revenue and the Red line represents expenses' sideText='+4%'/>
+                <BoxHeader title='Revenue and Expenses' subtitle='The Green line represents revenue and the Red line represents expenses' sideText='+1%'/>
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                     width={500} 
@@ -95,40 +95,34 @@ const Row1 = () => {
                 </ResponsiveContainer>
             </DashboardBox>
 
-            <DashboardBox gridArea="b"> 
-            <BoxHeader title='Profit and Revenue' subtitle='The Green line represents revenue and the Purple line represents profit' sideText='+4%'/>
+            <DashboardBox gridArea="b">
+                <BoxHeader title='Profit and Revenue' subtitle='The Green bar represents revenue and the Purple bar represents profit' sideText='+1%'/>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                    data={profitAndRevenue}
-                    margin={{
-                        top: 20,
-                        right: 0,
-                        left: -10,
-                        bottom: 55,
-                    }}
-                    >
-                        <CartesianGrid vertical={false} stroke={palette.grey[800]}/>
-                        
-                        <XAxis dataKey="name"  tickLine={false} style={{fontSize:"10px"}}/>
-                        <YAxis yAxisId="left" axisLine={false} tickLine={false} style={{fontSize:"10px"}}  />
-                        <YAxis yAxisId="right" orientation='right' axisLine={false} tickLine={false} style={{fontSize:"10px"}}  />
-                        <Tooltip/>
-                        <Legend
-                            height={20}
-                            wrapperStyle={{margin:'0 0 10px 0'}}
-
-                        />
-                        <Line yAxisId="left" type="monotone" dataKey="profit" stroke={palette.tertiary[500]} />
-                        <Line yAxisId="right" type="monotone" dataKey="revenue" stroke={palette.primary.main} />
-
-                    </LineChart>
-                </ResponsiveContainer>
-                    
+                    <BarChart
+                        width={500}
+                        height={300}
+                        data={profitAndRevenue}
+                        margin={{
+                            top: 20,
+                            right: 10,
+                            left: -10,
+                            bottom: 55,
+                        }}
+                >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="profit" fill={palette.tertiary[500]} minPointSize={5}>
+                </Bar>
+                <Bar dataKey="revenue" fill={palette.primary[700]} minPointSize={10} />
+                </BarChart>
+                </ResponsiveContainer>   
             </DashboardBox>
 
 
             <DashboardBox gridArea="c"> 
-                <BoxHeader title='Revenue Month by Month' subtitle='Graph representing the revenue month by month' sideText='+4%'/>
+                <BoxHeader title='Revenue Month by Month' subtitle='Graph representing the revenue month by month' sideText='+1%'/>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                     width={500}
@@ -148,10 +142,10 @@ const Row1 = () => {
                                 <stop offset="95%"  stopColor={palette.primary[300]} stopOpacity={0}/>
                             </linearGradient>
                     </defs>
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} style={{fontSize:"10px"}}  />
+                    <XAxis dataKey="name" style={{fontSize:"10px"}}  />
                     <YAxis axisLine={false} tickLine={false} style={{fontSize:"10px"}} />
                     <Tooltip />
-                    <Bar dataKey="revenue" fill="url(#colorRevenue)"  />
+                    <Bar dataKey="revenue" fill="url(#colorRevenue)"  /> 
                     </BarChart>
             </ResponsiveContainer>
                     
