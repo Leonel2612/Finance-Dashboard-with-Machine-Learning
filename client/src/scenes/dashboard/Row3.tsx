@@ -40,6 +40,7 @@ const ChartBubleLastAndFirst = ({
         yName: "Count",
         sizeKey: "totalAmount",
         sizeName: "Total amount of money", 
+        labelKey:"buyer"
       },
       {
         type: "bubble",
@@ -51,6 +52,8 @@ const ChartBubleLastAndFirst = ({
         yName: "Count",
         sizeKey: "totalAmount",
         sizeName: "Total amount of money",
+        labelKey:"buyer"
+
       },
     ],
     axes: [
